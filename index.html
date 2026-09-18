@@ -1,0 +1,3146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jira Board - Remodelación &amp; Reparación Post-Sísmica</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #334155;
+      --bg-hover: #475569;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-orange: #f97316;
+      --accent-purple: #a855f7;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --border: #475569;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes viewFade {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes ringPulse {
+      0%   { box-shadow: 0 0 0 0 currentColor; }
+      70%  { box-shadow: 0 0 0 7px transparent; }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+
+    @keyframes badgeBump {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.28); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes titleGlow {
+      0%, 100% { filter: brightness(1); }
+      50%      { filter: brightness(1.25); }
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background-color: var(--bg-secondary);
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      left: 0; bottom: -1px;
+      width: 140px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      animation: titleGlow 3.5s ease-in-out infinite;
+    }
+
+    .header-title h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.01em;
+      animation: fadeInUp 0.5s ease both;
+    }
+
+    .header-title p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      animation: fadeInUp 0.5s ease 0.08s both;
+    }
+
+    .controls {
+      background-color: var(--bg-secondary);
+      padding: 0.75rem 2rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .view-switcher { display: flex; gap: 0.4rem; }
+
+    .view-switcher button, .filter-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s ease, color 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
+    }
+
+    .view-switcher button:active, .filter-select:active { transform: scale(0.96); }
+
+    .view-switcher button.active, .view-switcher button:hover {
+      background: var(--accent);
+      color: #000;
+      font-weight: 600;
+      box-shadow: 0 4px 12px -4px var(--accent);
+    }
+
+    .view-switcher button.active { transform: translateY(-1px); }
+
+    /* Kanban View */
+    .kanban-container {
+      display: flex;
+      gap: 1.5rem;
+      padding: 1.5rem 2rem;
+      overflow-x: auto;
+      flex-grow: 1;
+    }
+
+    .column {
+      background-color: var(--bg-secondary);
+      border-radius: 8px;
+      min-width: 300px;
+      max-width: 320px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      animation: fadeInUp 0.4s ease both;
+      animation-delay: calc(var(--col-i, 0) * 80ms);
+    }
+
+    .column-header {
+      padding: 1rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .column-header .badge {
+      background: var(--bg-card);
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+
+    .column-header .badge.bump { animation: badgeBump 0.35s ease; }
+
+    .cards-container {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+      flex-grow: 1;
+      min-height: 200px;
+      transition: background-color 0.15s ease;
+    }
+
+    .cards-container.drag-over {
+      background-color: rgba(56, 189, 248, 0.06);
+      border-radius: 6px;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      padding: 1rem;
+      border-radius: 6px;
+      border-left: 4px solid var(--accent);
+      cursor: grab;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      animation: fadeInUp 0.35s ease both;
+      animation-delay: calc(var(--i, 0) * 45ms);
+    }
+
+    .card:active { cursor: grabbing; }
+
+    .card:hover {
+      transform: translateY(-3px) scale(1.01);
+      box-shadow: 0 10px 20px -6px var(--status-color, rgba(0,0,0,0.4));
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .card-tag {
+      background: var(--bg-primary);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      line-height: 1.3;
+    }
+
+    .card-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 0.5rem;
+    }
+
+    .assignee {
+      background: var(--bg-hover);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* Table View */
+    .table-container {
+      display: none;
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    /* Formulario para agregar tareas a la matriz */
+    .add-task-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      animation: fadeInUp 0.4s ease both;
+    }
+
+    .add-task-panel h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.9rem;
+    }
+
+    .add-task-grid {
+      display: grid;
+      grid-template-columns: 1.25fr 1.25fr 1.6fr 1fr 1.5fr 1.15fr 0.75fr auto;
+      gap: 0.7rem;
+      align-items: start;
+    }
+
+    /* As datas têm uma linha auxiliar própria, então reservamos esse espaço
+       para que todos os campos principais fiquem perfeitamente alinhados. */
+    .add-task-grid .field {
+      min-width: 0;
+    }
+
+    .add-task-grid .task-date-summary {
+      min-height: 1.95rem;
+    }
+
+    .add-task-grid .btn-add {
+      align-self: end;
+      margin-bottom: 1.95rem;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1250px) {
+      .add-task-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .add-task-grid .btn-add {
+        margin-bottom: 0;
+        align-self: stretch;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .add-task-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+      font-weight: 500;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.5rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+    }
+
+    .field input[type="datetime-local"] {
+      min-width: 0;
+    }
+
+    .task-date-summary {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+      line-height: 1.35;
+    }
+
+    .task-duration {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      color: var(--accent);
+      font-size: .7rem;
+      font-weight: 600;
+    }
+
+    .modal-field input {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.55rem 0.65rem;
+      border-radius: 7px;
+      font-size: 0.78rem;
+    }
+
+    .modal-field input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .field input:focus, .field select:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .btn-add {
+      background: var(--accent-green);
+      color: #06260f;
+      border: none;
+      padding: 0.55rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      height: fit-content;
+      transition: filter 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-add:hover { filter: brightness(1.08); box-shadow: 0 6px 14px -5px var(--accent-green); }
+    .btn-add:active { transform: scale(0.95); }
+
+    @media (max-width: 900px) {
+      .add-task-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* Resumen de estadísticas (usado en Matriz y Línea de Tiempo) */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.8rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--stat-color, var(--accent));
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      animation: fadeInUp 0.4s ease both;
+      animation-delay: calc(var(--i, 0) * 60ms);
+      transition: transform 0.15s ease;
+    }
+
+    .stat-card:hover { transform: translateY(-2px); }
+
+    .stat-card .stat-value {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--stat-color, var(--text-main));
+      line-height: 1;
+      margin-bottom: 0.35rem;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.01em;
+    }
+
+    @media (max-width: 1000px) { .stats-strip { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px)  { .stats-strip { grid-template-columns: repeat(2, 1fr); } }
+
+    /* Matriz: agrupación por semana con filas tipo tarjeta */
+    .week-group { margin-bottom: 1.5rem; }
+
+    .week-group-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.6rem;
+      padding-left: 0.15rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .week-group-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .chip {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: var(--bg-primary);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .chip-week { color: var(--accent); }
+
+    .matrix-row {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--row-color, var(--accent));
+      border-radius: 8px;
+      padding: 0.9rem 1.15rem;
+      margin-bottom: 0.7rem;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+      animation: fadeInUp 0.3s ease both;
+      animation-delay: calc(var(--i, 0) * 30ms);
+    }
+
+    .matrix-row:hover {
+      transform: translateX(4px);
+      box-shadow: 0 8px 18px -8px var(--row-color, rgba(0,0,0,0.4));
+    }
+
+    .matrix-row-main { flex: 1; min-width: 0; }
+
+    .matrix-row-clickable {
+      cursor: pointer;
+      border-radius: 7px;
+      padding: 0.15rem 0.35rem;
+      margin: -0.15rem -0.35rem;
+      transition: background 0.15s ease;
+    }
+
+    .matrix-row-clickable:hover {
+      background: rgba(255,255,255,0.025);
+    }
+
+    .matrix-row-open {
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--bg-card);
+      color: var(--text-main);
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .matrix-row-open:hover {
+      transform: translateX(3px);
+      border-color: var(--accent);
+      background: var(--bg-primary);
+    }
+
+    .matrix-row-top {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    .matrix-row-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      line-height: 1.3;
+    }
+
+    .matrix-row-value {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-style: italic;
+      border-left: 2px solid var(--border);
+      padding-left: 0.6rem;
+      line-height: 1.4;
+    }
+
+    .matrix-row-side {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 800px) {
+      .matrix-row { flex-direction: column; align-items: stretch; }
+      .matrix-row-side { justify-content: space-between; }
+    }
+
+    /* Selector de Semana en la Matriz */
+    .week-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 0.3rem 0.6rem;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    
+    .week-select:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px -4px rgba(255,255,255,0.2);
+    }
+    
+    .week-select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .week-select option {
+      background: var(--bg-card);
+      color: var(--text-main);
+    }
+
+    /* Selector de prioridad con el mismo estilo visual del selector de estado */
+    .priority-select-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.3rem 0.7rem 0.3rem 0.6rem;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    .priority-select-wrap:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px -4px currentColor;
+    }
+
+    .priority-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px 0 currentColor;
+    }
+
+    .priority-select {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 0.5rem;
+    }
+
+    .priority-select:focus { outline: none; }
+    .priority-select option { background: var(--bg-card); color: var(--text-main); }
+
+    /* Selector de estado tipo semáforo */
+    .status-select-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.3rem 0.7rem 0.3rem 0.6rem;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    .status-select-wrap:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px -4px currentColor;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px 0 currentColor;
+      transition: background-color 0.3s ease;
+    }
+
+    .status-dot.is-progress { animation: ringPulse 1.8s ease-out infinite; }
+
+    .status-select {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 0.5rem;
+    }
+
+    .status-select:focus { outline: none; }
+    .status-select option { background: var(--bg-card); color: var(--text-main); }
+
+    .row-remove {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      line-height: 1;
+      transition: all 0.15s ease;
+    }
+
+    .row-remove:hover {
+      color: var(--accent-red);
+      border-color: var(--accent-red);
+      transform: rotate(90deg);
+    }
+
+    .dragging { opacity: 0.4; }
+
+
+    /* Épicas / categorías */
+    .epic-select-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      max-width: 100%;
+    }
+
+    .epic-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    .epic-select {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      max-width: 145px;
+    }
+
+    .epic-select:focus { outline: none; }
+    .epic-select option { background: var(--bg-card); color: var(--text-main); }
+
+    .card-epic {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      color: var(--text-main);
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+
+    .epic-manager-panel {
+      display:flex; align-items:center; justify-content:space-between; gap:1rem;
+      margin-bottom:1rem; padding:1rem 1.1rem; background:var(--bg-card);
+      border:1px solid var(--border); border-radius:12px;
+    }
+    .epic-manager-title { display:flex; align-items:center; gap:.7rem; }
+    .epic-manager-title h2 { margin:0; font-size:1rem; }
+    .epic-manager-title p { margin:.15rem 0 0; color:var(--text-muted); font-size:.75rem; }
+    .epic-create-btn { border:1px solid var(--border); background:var(--bg-primary); color:var(--text-main);
+      border-radius:8px; padding:.55rem .8rem; cursor:pointer; font-weight:700; }
+    .epic-create-btn:hover { border-color:var(--accent); transform:translateY(-1px); }
+    .epic-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.62); display:none; align-items:center; justify-content:center; z-index:1200; padding:1rem; }
+    .epic-modal-overlay.open { display:flex; }
+    .epic-modal { width:min(520px,100%); background:var(--bg-card); border:1px solid var(--border); border-radius:16px; box-shadow:0 25px 80px rgba(0,0,0,.45); overflow:hidden; }
+    .epic-modal-header { display:flex; justify-content:space-between; align-items:center; padding:1rem 1.15rem; border-bottom:1px solid var(--border); }
+    .epic-modal-header h2 { margin:0; font-size:1.05rem; }
+    .epic-modal-close { border:0; background:transparent; color:var(--text-muted); font-size:1.6rem; cursor:pointer; }
+    .epic-modal-body { padding:1.15rem; }
+    .epic-modal-actions { display:flex; justify-content:flex-end; gap:.6rem; margin-top:1rem; }
+    .epic-cancel { border:1px solid var(--border); background:transparent; color:var(--text-main); padding:.6rem .9rem; border-radius:8px; cursor:pointer; }
+    .epic-save { border:0; background:var(--accent); color:white; padding:.6rem .95rem; border-radius:8px; cursor:pointer; font-weight:700; }
+    .epic-order-hint { margin-top:.7rem; color:var(--text-muted); font-size:.72rem; }
+
+    .card-epic-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .card-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .subtask-progress {
+      margin-top: 0.65rem;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+
+    .subtask-progress-track {
+      height: 4px;
+      margin-top: 0.35rem;
+      background: var(--bg-primary);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .subtask-progress-fill {
+      height: 100%;
+      background: var(--accent-green);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    /* Modal de detalle y checklist */
+    .task-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.78);
+      backdrop-filter: blur(5px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1.25rem;
+    }
+
+    .task-modal-overlay.open { display: flex; }
+
+    .task-modal {
+      width: min(720px, 96vw);
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.45);
+      animation: popIn 0.2s ease both;
+    }
+
+    .task-modal-header {
+      padding: 1.1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .task-modal-header h2 {
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    .task-modal-id {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      margin-top: 0.25rem;
+    }
+
+    .task-modal-close {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .task-modal-close:hover {
+      color: var(--text-main);
+      border-color: var(--accent);
+    }
+
+    .task-modal-body { padding: 1.25rem; }
+
+    .task-modal-fields {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .modal-field label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .modal-field select {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.55rem 0.65rem;
+      border-radius: 7px;
+      font-size: 0.78rem;
+    }
+
+    .modal-section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.7rem;
+    }
+
+    .modal-section-title h3 { font-size: 0.9rem; }
+
+    .subtask-count {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+
+    .subtask-add {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtask-add input {
+      flex: 1;
+      min-width: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.65rem 0.75rem;
+      border-radius: 7px;
+    }
+
+    .subtask-add button {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 7px;
+      padding: 0 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .subtask-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .subtask-item {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 0.65rem 0.7rem;
+    }
+
+    .subtask-item input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--accent-green);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .subtask-text {
+      flex: 1;
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+
+    .subtask-item.completed .subtask-text {
+      color: var(--text-muted);
+      text-decoration: line-through;
+    }
+
+    .subtask-delete {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.1rem 0.25rem;
+    }
+
+    .subtask-delete:hover { color: var(--accent-red); }
+
+    .subtask-empty {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      padding: 0.9rem;
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: 7px;
+    }
+
+    @media (max-width: 700px) {
+      .task-modal-fields { grid-template-columns: 1fr; }
+    }
+
+    /* Vista Información del Cliente */
+    .client-container {
+      display: none;
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .client-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .client-form-panel, .client-preview-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      animation: fadeInUp 0.4s ease both;
+    }
+
+    .client-preview-panel { animation-delay: 0.08s; }
+
+    .client-form-panel h2, .client-preview-panel h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    .client-form-panel .field { margin-bottom: 1rem; }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+
+    .client-form-panel textarea {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.6rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      resize: vertical;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .client-form-panel textarea:focus,
+    .client-form-panel input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .client-preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .client-preview-header h2 { margin-bottom: 0; }
+
+    .btn-copy {
+      background: var(--accent);
+      color: #04202c;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: filter 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-copy:hover { filter: brightness(1.08); box-shadow: 0 6px 14px -5px var(--accent); }
+    .btn-copy:active { transform: scale(0.95); }
+
+    .client-preview-box {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text-main);
+      min-height: 260px;
+      transition: box-shadow 0.3s ease;
+    }
+
+    .copy-feedback {
+      font-size: 0.78rem;
+      color: var(--accent-green);
+      margin-top: 0.5rem;
+      min-height: 1em;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .copy-feedback.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 900px) {
+      .client-grid { grid-template-columns: 1fr; }
+      .field-row { grid-template-columns: 1fr; }
+    }
+
+
+    /* Gestión de Personas y Roles */
+    .people-container {
+      display: none;
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .people-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .people-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      animation: fadeInUp 0.4s ease both;
+    }
+
+    .people-panel h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    .people-form {
+      display: grid;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .people-form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 0.7rem;
+      align-items: end;
+    }
+
+    .people-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .person-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 0.7rem 0.8rem;
+    }
+
+    .person-info { min-width: 0; }
+    .person-name { font-size: 0.82rem; font-weight: 600; }
+    .person-role { font-size: 0.72rem; color: var(--accent); margin-top: 0.15rem; }
+
+    .people-delete {
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 6px;
+      padding: 0.3rem 0.5rem;
+      cursor: pointer;
+    }
+
+    .people-delete:hover { color: var(--accent-red); border-color: var(--accent-red); }
+    .people-empty { color: var(--text-muted); font-size: 0.78rem; padding: 0.8rem; text-align: center; border: 1px dashed var(--border); border-radius: 7px; }
+    .person-role-description { color: var(--text-muted); font-size: 0.72rem; line-height: 1.45; margin-top: 0.25rem; }
+
+    .assignee-detail {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.2rem;
+    }
+
+    .assignee-detail-role {
+      color: var(--accent);
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 900px) {
+      .people-grid { grid-template-columns: 1fr; }
+      .people-form-row { grid-template-columns: 1fr; }
+    }
+
+    /* Vista Línea de Tiempo */
+    .timeline-container {
+      display: none;
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .timeline-legend {
+      display: flex;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .overall-progress {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.1rem 1.4rem;
+      margin-bottom: 1.25rem;
+      animation: fadeInUp 0.4s ease both;
+    }
+
+    .overall-progress-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.6rem;
+    }
+
+    .overall-progress-top h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .overall-progress-pct {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--accent-green);
+    }
+
+    .overall-progress-track {
+      height: 12px;
+      background: var(--bg-primary);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .overall-progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-green));
+      transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .week-day-range {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .sprint-dates {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-shrink: 0;
+    }
+
+    .date-picker-btn {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 0.32rem 0.6rem;
+      font-size: 0.72rem;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+    }
+
+    .date-picker-btn:hover { border-color: var(--accent); box-shadow: 0 4px 10px -5px var(--accent); }
+    .date-picker-btn:active { transform: scale(0.96); }
+    .date-picker-btn.is-empty { color: var(--text-muted); }
+    .date-picker-btn.is-open { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25); }
+
+    .sprint-dates-sep { color: var(--text-muted); font-size: 0.72rem; }
+
+    .sprint-dates-readonly {
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    /* Calendario desplegable */
+    .date-picker-popup {
+      position: absolute;
+      z-index: 1000;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem;
+      box-shadow: 0 16px 32px -10px rgba(0,0,0,0.6);
+      width: 230px;
+      display: none;
+      animation: popIn 0.15s ease;
+    }
+
+    .date-picker-popup.open { display: block; }
+
+    .dp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .dp-month-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: capitalize;
+    }
+
+    .dp-nav {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      transition: background 0.15s ease, transform 0.12s ease;
+    }
+
+    .dp-nav:hover { background: var(--bg-hover); }
+    .dp-nav:active { transform: scale(0.9); }
+
+    .dp-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-size: 0.64rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .dp-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+
+    .dp-cell {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 0.72rem;
+      padding: 0.4rem 0;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    }
+
+    .dp-cell:hover:not(.dp-empty) { background: var(--bg-hover); transform: scale(1.08); }
+    .dp-empty { cursor: default; }
+    .dp-today { color: var(--accent); font-weight: 700; }
+    .dp-selected { background: var(--accent); color: #04202c; font-weight: 700; }
+    .dp-selected:hover { background: var(--accent); }
+
+    .dp-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.5rem;
+    }
+
+    .dp-clear, .dp-today-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .dp-clear:hover, .dp-today-btn:hover { color: var(--accent); }
+
+    .timeline-bar-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      padding: 0 0.5rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: rgba(0,0,0,0.65);
+      overflow: hidden;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .week-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 1.25rem;
+      overflow: hidden;
+      animation: fadeInUp 0.4s ease both;
+      animation-delay: calc(var(--w-i, 0) * 90ms);
+    }
+
+    .week-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.9rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+      flex-wrap: wrap;
+      row-gap: 0.5rem;
+    }
+
+    .week-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--accent);
+      min-width: 40px;
+    }
+
+    .week-progress-track {
+      flex-grow: 1;
+      height: 8px;
+      background: var(--bg-primary);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .week-progress-fill {
+      height: 100%;
+      background: var(--accent-green);
+      border-radius: 999px;
+      transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.4s ease;
+    }
+
+    .week-progress-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      min-width: 130px;
+      text-align: right;
+    }
+
+    .timeline-rows { padding: 0.75rem 1.25rem; }
+
+    .timeline-row {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      animation: fadeInUp 0.35s ease both;
+      animation-delay: calc(var(--r-i, 0) * 35ms);
+    }
+
+    .timeline-row:last-child { border-bottom: none; }
+
+    .timeline-label {
+      font-size: 0.8rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .timeline-label .tl-day {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      display: block;
+    }
+
+    .timeline-track {
+      position: relative;
+      height: 20px;
+      background: var(--bg-primary);
+      border-radius: 4px;
+    }
+
+    .timeline-bar {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      border-radius: 4px;
+      min-width: 8%;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.25) inset;
+      transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1), width 0.5s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s ease, box-shadow 0.2s ease;
+    }
+
+    .timeline-bar:hover {
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.25) inset, 0 0 10px 1px currentColor;
+    }
+
+    @media (max-width: 800px) {
+      .timeline-row { grid-template-columns: 1fr; }
+      .week-progress-label { min-width: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title">
+      <h1>Proyecto Remodelación Post-Sísmica</h1>
+      <p>Product Owner: Braiam Solano | Scrum Master: Sara Yineth</p>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="view-switcher">
+      <button id="btn-kanban" class="active" onclick="switchView('kanban')">Tablero Kanban</button>
+      <button id="btn-table" onclick="switchView('table')">Matriz del Product Backlog</button>
+      <button id="btn-timeline" onclick="switchView('timeline')">Línea de Tiempo</button>
+      <button id="btn-client" onclick="switchView('client')">Información del Cliente</button>
+      <button id="btn-people" onclick="switchView('people')">Personas y Roles</button>
+    </div>
+    <select class="filter-select" id="filter-assignee" onchange="filterTasks()">
+      <option value="ALL">Todos los Responsables</option>
+      <option value="Sara">Sara</option>
+      <option value="Steven">Steven</option>
+      <option value="Yesenia">Yesenia</option>
+      <option value="Carolina">Carolina</option>
+      <option value="Braiam">Braiam</option>
+    </select>
+  </div>
+
+  <!-- Vista Kanban -->
+  <div class="kanban-container" id="kanban-view">
+
+    <div class="column" ondragover="allowDrop(event)" ondrop="drop(event)" data-status="backlog">
+      <div class="column-header">
+        <span>POR HACER (BACKLOG)</span>
+        <span class="badge" id="count-backlog">0</span>
+      </div>
+      <div class="cards-container" id="container-backlog"></div>
+    </div>
+
+    <div class="column" ondragover="allowDrop(event)" ondrop="drop(event)" data-status="progress">
+      <div class="column-header" style="border-bottom-color: var(--accent-orange);">
+        <span>EN PROGRESO</span>
+        <span class="badge" id="count-progress">0</span>
+      </div>
+      <div class="cards-container" id="container-progress"></div>
+    </div>
+
+    <div class="column" ondragover="allowDrop(event)" ondrop="drop(event)" data-status="review">
+      <div class="column-header" style="border-bottom-color: var(--accent-purple);">
+        <span>EN REVISIÓN / PO</span>
+        <span class="badge" id="count-review">0</span>
+      </div>
+      <div class="cards-container" id="container-review"></div>
+    </div>
+
+    <div class="column" ondragover="allowDrop(event)" ondrop="drop(event)" data-status="done">
+      <div class="column-header" style="border-bottom-color: var(--accent-green);">
+        <span>FINALIZADO (DONE)</span>
+        <span class="badge" id="count-done">0</span>
+      </div>
+      <div class="cards-container" id="container-done"></div>
+    </div>
+
+  </div>
+
+  <!-- Vista Tabla / Matriz -->
+  <div class="table-container" id="table-view">
+
+    <div class="epic-manager-panel">
+      <div class="epic-manager-title">
+        <span class="epic-dot" style="background:var(--accent);color:var(--accent)"></span>
+        <div><h2>Épicas / Categorías</h2><p>Crea primero la Épica y luego asigna las tareas que pertenecen a ella.</p></div>
+      </div>
+      <button class="epic-create-btn" onclick="openEpicModal()">+ Crear Épica / Categoría</button>
+    </div>
+
+    <div class="add-task-panel">
+      <h2>Agregar tarea a la matriz</h2>
+      <div class="add-task-grid">
+        <div class="field">
+          <label for="in-start">Desde</label>
+          <input id="in-start" type="datetime-local">
+          <div class="task-date-summary">Fecha y hora de inicio</div>
+        </div>
+        <div class="field">
+          <label for="in-end">Hasta</label>
+          <input id="in-end" type="datetime-local">
+          <div class="task-date-summary">Puede ser el mismo día y hora distinta</div>
+        </div>
+        <div class="field">
+          <label for="in-title">Tarea / Actividad</label>
+          <input id="in-title" type="text" placeholder="Nombre de la tarea">
+        </div>
+        <div class="field">
+          <label for="in-assignee">Responsable</label>
+          <input id="in-assignee" type="text" placeholder="Nombre(s)" list="people-datalist">
+        </div>
+        <div class="field">
+          <label for="in-valor">Valor aportado al cliente</label>
+          <input id="in-valor" type="text" placeholder="Qué gana el cliente con esto">
+        </div>
+        <div class="field">
+          <label for="in-epica">Épica / Categoría</label>
+          <select id="in-epica"></select>
+        </div>
+        <div class="field">
+          <label for="in-prioridad">Prioridad</label>
+          <select id="in-prioridad">
+            <option value="alta">Alta</option>
+            <option value="media" selected>Media</option>
+            <option value="baja">Baja</option>
+          </select>
+        </div>
+        <button class="btn-add" onclick="addTask()">+ Agregar</button>
+      </div>
+    </div>
+
+    <div class="stats-strip" id="matrix-stats"></div>
+    <div id="matrix-body"></div>
+  </div>
+
+  <!-- Vista Línea de Tiempo -->
+  <div class="timeline-container" id="timeline-view">
+    <div class="overall-progress" id="overall-progress"></div>
+    <div class="stats-strip" id="timeline-stats"></div>
+    <div class="timeline-legend">
+      <span style="color:var(--text-muted);font-size:.78rem;">Proyecto de 4 semanas · septiembre de 2026</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>Por hacer</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--accent-orange)"></span>En progreso</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--accent-purple)"></span>En revisión</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--accent-green)"></span>Finalizado</span>
+    </div>
+    <div id="timeline-body"></div>
+  </div>
+
+  <!-- Vista Información del Cliente -->
+  <div class="client-container" id="client-view">
+    <div class="client-grid">
+      <div class="client-form-panel">
+        <h2>Datos del cliente</h2>
+
+        <div class="field">
+          <label for="cl-nombre">Nombre completo</label>
+          <input id="cl-nombre" type="text" placeholder="Nombre del cliente" oninput="saveClient()">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="cl-telefono">Teléfono</label>
+            <input id="cl-telefono" type="text" placeholder="300 000 0000" oninput="saveClient()">
+          </div>
+          <div class="field">
+            <label for="cl-email">Correo electrónico</label>
+            <input id="cl-email" type="text" placeholder="cliente@correo.com" oninput="saveClient()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="cl-direccion">Dirección</label>
+          <input id="cl-direccion" type="text" placeholder="Dirección del inmueble" oninput="saveClient()">
+        </div>
+
+        <div class="field">
+          <label for="cl-presupuesto">Presupuesto</label>
+          <input id="cl-presupuesto" type="text" placeholder="Ej. $15.000.000 COP" oninput="saveClient()">
+        </div>
+
+        <div class="field">
+          <label for="cl-contexto">Resumen del contexto y condiciones que pide</label>
+          <textarea id="cl-contexto" rows="6" placeholder="Describe el contexto del proyecto, expectativas y condiciones específicas del cliente..." oninput="saveClient()"></textarea>
+        </div>
+      </div>
+
+      <div class="client-preview-panel">
+        <div class="client-preview-header">
+          <h2>Resumen copiable</h2>
+          <button class="btn-copy" onclick="copyClientInfo()">Copiar información</button>
+        </div>
+        <pre class="client-preview-box" id="client-preview"></pre>
+        <p class="copy-feedback" id="copy-feedback"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista Personas y Roles -->
+  <div class="people-container" id="people-view">
+    <div class="people-grid">
+      <div class="people-panel">
+        <h2>Personas</h2>
+        <div class="people-form">
+          <div class="field">
+            <label for="person-name">Nombre de la persona</label>
+            <input id="person-name" type="text" placeholder="Ej. Braiam Solano">
+          </div>
+          <div class="field">
+            <label for="person-role">Rol</label>
+            <select id="person-role"></select>
+          </div>
+          <button class="btn-add" type="button" onclick="createPerson()">+ Crear persona</button>
+        </div>
+        <div class="people-list" id="people-list"></div>
+      </div>
+
+      <div class="people-panel">
+        <h2>Roles</h2>
+        <div class="people-form">
+          <div class="field">
+            <label for="role-name">Nombre del rol</label>
+            <input id="role-name" type="text" placeholder="Ej. Scrum Master">
+          </div>
+          <button class="btn-add" type="button" onclick="createRole()">+ Crear rol</button>
+        </div>
+        <div class="people-list" id="roles-list"></div>
+      </div>
+    </div>
+    <datalist id="people-datalist"></datalist>
+  </div>
+
+  <!-- Modal para crear una Épica / Categoría -->
+  <div class="epic-modal-overlay" id="epic-modal-overlay" onclick="closeEpicModalOnOverlay(event)">
+    <div class="epic-modal" role="dialog" aria-modal="true" aria-labelledby="epic-modal-title">
+      <div class="epic-modal-header">
+        <h2 id="epic-modal-title">Crear Épica / Categoría</h2>
+        <button class="epic-modal-close" onclick="closeEpicModal()">&times;</button>
+      </div>
+      <div class="epic-modal-body">
+        <div class="field">
+          <label for="epic-name">Nombre de la Épica / Categoría</label>
+          <input id="epic-name" type="text" placeholder="Ej. Seguridad Estructural">
+        </div>
+        <div class="field" style="margin-top:.8rem">
+          <label for="epic-description">Descripción (opcional)</label>
+          <textarea id="epic-description" rows="3" placeholder="Qué agrupa o qué objetivo tiene esta Épica"></textarea>
+        </div>
+        <div class="field" style="margin-top:.8rem">
+          <label for="epic-color">Color</label>
+          <input id="epic-color" type="color" value="#60a5fa" style="height:42px;padding:4px;cursor:pointer">
+        </div>
+        <div class="epic-order-hint">La Épica nueva se agregará al final. Puedes seguir moviendo tareas entre Épicas sin cambiar su Semana.</div>
+        <div class="epic-modal-actions">
+          <button class="epic-cancel" onclick="closeEpicModal()">Cancelar</button>
+          <button class="epic-save" onclick="createEpic()">Crear Épica</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de detalle de actividad y checklist -->
+  <div class="task-modal-overlay" id="task-modal-overlay" onclick="closeTaskModalOnOverlay(event)">
+    <div class="task-modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+      <div class="task-modal-header">
+        <div>
+          <h2 id="task-modal-title">Actividad</h2>
+          <div class="task-modal-id" id="task-modal-id"></div>
+        </div>
+        <button class="task-modal-close" onclick="closeTaskModal()" title="Cerrar">&times;</button>
+      </div>
+      <div class="task-modal-body">
+        <div class="task-modal-fields">
+          <div class="modal-field">
+            <label for="modal-epic">Épica / Categoría</label>
+            <select id="modal-epic" onchange="updateTaskFromModal('epic', this.value)"></select>
+          </div>
+          <div class="modal-field">
+            <label for="modal-priority">Prioridad</label>
+            <select id="modal-priority" onchange="updateTaskFromModal('priority', this.value)"></select>
+          </div>
+          <div class="modal-field">
+            <label for="modal-status">Estado</label>
+            <select id="modal-status" onchange="updateTaskFromModal('status', this.value)"></select>
+          </div>
+
+          <div class="modal-field">
+            <label for="modal-start">Desde</label>
+            <input id="modal-start" type="datetime-local" onchange="updateTaskFromModal('startDate', this.value)">
+          </div>
+          <div class="modal-field">
+            <label for="modal-end">Hasta</label>
+            <input id="modal-end" type="datetime-local" onchange="updateTaskFromModal('endDate', this.value)">
+          </div>
+        </div>
+
+        <div class="modal-section-title">
+          <h3>Checklist de ejecución</h3>
+          <span class="subtask-count" id="subtask-count">0/0 completadas</span>
+        </div>
+
+        <div class="subtask-add">
+          <input id="subtask-input" type="text" placeholder="Ej. Comprar pintura y rodillos"
+                 onkeydown="if(event.key==='Enter') addSubtask()">
+          <button onclick="addSubtask()">+ Agregar</button>
+        </div>
+
+        <div class="subtask-list" id="subtask-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Definición de los estados posibles (estilo semáforo)
+    const STATUS_DEFS = {
+      backlog:  { label: 'Por hacer',  color: 'var(--accent)' },
+      progress: { label: 'En progreso', color: 'var(--accent-orange)' },
+      review:   { label: 'En revisión', color: 'var(--accent-purple)' },
+      done:     { label: 'Finalizado',  color: 'var(--accent-green)' }
+    };
+
+    // Prioridades de las actividades
+    const PRIORITY_DEFS = {
+      alta:   { label: 'Alta', color: 'var(--accent-red, #ef4444)' },
+      media:  { label: 'Media', color: 'var(--accent-orange)' },
+      baja:   { label: 'Baja', color: 'var(--accent-green)' }
+    };
+
+    // Datos iniciales de la matriz del Product Backlog
+    let tasks = [
+      { id: '1', epic: 'seguridad', subtasks: [], sem: 'S1', dias: 'Días 1-2', title: 'Evaluación técnica y estructural', desc: 'Inspección por ingeniera civil/estructurista de vigas, columnas, muros de carga y ventanas post-terremoto.', assignee: 'Sara & Steven', valor: 'Garantiza la seguridad estructural innegociable de la vivienda.', status: 'done', priority: 'media' },
+      { id: '2', epic: 'sostenibilidad', subtasks: [], sem: 'S2', dias: 'Día 3', title: 'Definición de materiales eco-amigables', desc: 'Selección de pinturas sin VOC, griferías de ahorro, luces LED y revestimientos sostenibles.', assignee: 'Yesenia & Carolina', valor: 'Cumple con los criterios de sostenibilidad y eficiencia.', status: 'done', priority: 'media' },
+      { id: '3', epic: 'logistica', subtasks: [], sem: 'S4', dias: 'Día 4', title: 'Adquisición y logística de suministros', desc: 'Compra de insumos certificados y contratación de apoyo operativo.', assignee: 'Steven & Carolina', valor: 'Asegura la disponibilidad de insumos para no pausar la obra.', status: 'progress', priority: 'media' },
+      { id: '4', epic: 'logistica', subtasks: [], sem: 'S4', dias: 'Día 5', title: 'Consolidación de información y plan de zonificación', desc: 'Plan de convivencia limpia para habitar la casa durante los trabajos.', assignee: 'Braiam & Sara', valor: 'Permite a la familia seguir viviendo en la casa sin riesgo ni desorden excesivo.', status: 'progress', priority: 'media' },
+      { id: '5', epic: 'logistica', subtasks: [], sem: 'S4', dias: 'Días 6-7', title: 'Aislamiento de zonas y preparación', desc: 'Protección de mobiliario, enmascarado y retiro de pañete dañado por el sismo.', assignee: 'Steven & Carolina', valor: 'Protege los bienes del cliente del polvo y escombros.', status: 'backlog', priority: 'media' },
+      { id: '6', epic: 'seguridad', subtasks: [], sem: 'S1', dias: 'Días 8-9', title: 'Reparación sísmica menor', desc: 'Sellado técnico de fisuras, resane de grietas en muros/fachada y reajuste de marcos desplazados.', assignee: 'Steven (Sup. Sara)', valor: 'Corrige los daños del terremoto y prepara superficies para acabado.', status: 'backlog', priority: 'media' },
+      { id: '7', epic: 'seguridad', subtasks: [], sem: 'S1', dias: 'Día 10', title: 'Adecuación de base en muros', desc: 'Imprimación y sellado antihumedad ecológico en zonas críticas.', assignee: 'Steven & Yesenia', valor: 'Evita apariciones futuras de humedad y mejora fijación de pintura.', status: 'backlog', priority: 'media' },
+      { id: '8', epic: 'acabados', subtasks: [], sem: 'S3', dias: 'Días 11-12', title: 'Pintura ecológica de fachada e interiores', desc: 'Aplicación de pintura orgánica base agua (sin VOC) en paleta neutra.', assignee: 'Yesenia & Steven', valor: 'Renovación estética saludable y sin olores tóxicos para la familia.', status: 'backlog', priority: 'media' },
+      { id: '9', epic: 'acabados', subtasks: [], sem: 'S3', dias: 'Días 13-14', title: 'Renovación exprés de cocina y pared de acento', desc: 'Lacado/pintura de gabinetes y montaje de pared de acento ecológica en sala.', assignee: 'Yesenia', valor: 'Transforma los espacios sociales a bajo costo y alto impacto visual.', status: 'backlog', priority: 'media' },
+      { id: '10', epic: 'acabados', subtasks: [], sem: 'S3', dias: 'Día 15', title: 'Revisión de avances del Sprint 3', desc: 'Inspección visual de superficies y acabados junto al cliente (Product Owner).', assignee: 'Braiam & Sara', valor: 'Validación continua para asegurar satisfacción antes de la entrega.', status: 'backlog', priority: 'media' },
+      { id: '11', epic: 'sostenibilidad', subtasks: [], sem: 'S2', dias: 'Días 16-17', title: 'Instalación de eficiencia hidroeléctrica', desc: 'Cambio a griferías de bajo consumo y montaje de iluminación LED en toda la casa.', assignee: 'Carolina', valor: 'Reduce el consumo de agua y energía de la vivienda.', status: 'backlog', priority: 'media' },
+      { id: '12', epic: 'sostenibilidad', subtasks: [], sem: 'S2', dias: 'Día 18', title: 'Adecuación del rincón de teletrabajo', desc: 'Instalación de puntos eléctricos, iluminación dedicada y organización de cableado.', assignee: 'Carolina', valor: 'Brinda un espacio funcional para el trabajo remoto.', status: 'backlog', priority: 'media' },
+      { id: '13', epic: 'logistica', subtasks: [], sem: 'S4', dias: 'Día 19', title: 'Retiro de protecciones y limpieza profunda', desc: 'Desinfección, eliminación total de polvo y recolección de residuos.', assignee: 'Carolina & Steven', valor: 'Deja la vivienda en condiciones impecables para el evento.', status: 'backlog', priority: 'media' },
+      { id: '14', epic: 'seguridad', subtasks: [], sem: 'S1', dias: 'Día 20', title: 'Inspección de calidad final y acta de entrega', desc: 'Recorrido con el cliente para aprobación total del proyecto antes del evento.', assignee: 'Braiam & Equipo', valor: 'Cierre del proyecto a las 4 semanas exactas con 100% de cumplimiento.', status: 'backlog', priority: 'media' }
+    ];
+
+    let nextId = 15;
+
+    // Personas y roles: se guardan de forma independiente para no alterar
+    // la estructura existente de las tareas.
+    const PEOPLE_ROLES_STORAGE_KEY = 'post-sismico-personas-roles-v1';
+    const DEFAULT_PEOPLE_ROLES = {
+      roles: [
+        { id: 'role-1', name: 'Product Owner / Cliente', description: 'Define las prioridades, valida la paleta de colores, aprueba el presupuesto y los materiales eco-amigables, y da el visto bueno final a los entregables de cada zona.' },
+        { id: 'role-2', name: 'Scrum Master / Líder de Proyecto', description: 'Ingeniera Civil. Facilita la resolución de bloqueos técnicos, asegura el cumplimiento del cronograma estricto de 4 semanas, supervisa la logística mientras la familia habita la vivienda y mantiene la alineación con las normativas técnicas.' },
+        { id: 'role-3', name: 'Desarrollador 1 - Especialista en Inspección y Seguridad Estructural', description: 'Ejecuta y coordina la inspección sísmica de vigas y columnas, el sellado técnico de fisuras/grietas post-terremoto, el resane de pañete y el reajuste de marcos de ventanas desplazados.' },
+        { id: 'role-4', name: 'Desarrollador 2 - Especialista en Materiales Sostenibles y Acabados', description: 'Encargada de la aplicación de pinturas orgánicas ecológicas (sin VOC), la pared de acento ecológica en la sala, los revestimientos sostenibles (bambú/FSC) y la renovación exprés (lacado/pintura) de gabinetes de cocina.' },
+        { id: 'role-5', name: 'Desarrollador 3 - Especialista en Eficiencia Hidroeléctrica y Calidad', description: 'Encargada de la sustitución de griferías por modelos de bajo consumo, instalación del sistema de iluminación LED, adecuación de puntos eléctricos/luz en el espacio de teletrabajo y supervisión del protocolo de limpieza/zonificación post-obra.' }
+      ],
+      people: [
+        { id: 'person-1', name: 'Braiam', roleId: 'role-1', aliases: ['Braiam'] },
+        { id: 'person-2', name: 'Sara Yineth', roleId: 'role-2', aliases: ['Sara', 'Sara Yineth'] },
+        { id: 'person-3', name: 'Steven', roleId: 'role-3', aliases: ['Steven'] },
+        { id: 'person-4', name: 'Yesenia Salgado', roleId: 'role-4', aliases: ['Yesenia', 'Yesenia Salgado'] },
+        { id: 'person-5', name: 'Carolina', roleId: 'role-5', aliases: ['Carolina'] }
+      ]
+    };
+
+    let peopleRoles = JSON.parse(JSON.stringify(DEFAULT_PEOPLE_ROLES));
+
+    function savePeopleRoles() {
+      try {
+        localStorage.setItem(PEOPLE_ROLES_STORAGE_KEY, JSON.stringify(peopleRoles));
+      } catch (e) {
+        // La aplicación continúa funcionando en memoria si localStorage no está disponible.
+      }
+    }
+
+    function loadPeopleRoles() {
+      try {
+        const raw = localStorage.getItem(PEOPLE_ROLES_STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (!saved || !Array.isArray(saved.roles) || !Array.isArray(saved.people)) return;
+        peopleRoles = saved;
+      } catch (e) {
+        peopleRoles = JSON.parse(JSON.stringify(DEFAULT_PEOPLE_ROLES));
+      }
+    }
+
+    function getPersonRole(name) {
+      const normalized = String(name).trim().toLowerCase();
+      const person = peopleRoles.people.find(p =>
+        String(p.name).trim().toLowerCase() === normalized ||
+        (Array.isArray(p.aliases) && p.aliases.some(a => String(a).trim().toLowerCase() === normalized))
+      );
+      if (!person || !person.roleId) return '';
+      const role = peopleRoles.roles.find(r => r.id === person.roleId);
+      return role ? role.name : '';
+    }
+
+    function formatAssigneeWithRoles(assignee) {
+      if (!assignee) return 'Sin responsable';
+      return String(assignee).split(/\s*&\s*|\s*,\s*/).map(part => {
+        const match = part.match(/^(.+?)\s*\((.*?)\)$/);
+        const name = match ? match[1].trim() : part.trim();
+        const existingNote = match ? match[2].trim() : '';
+        const role = getPersonRole(name);
+        const roleText = role || existingNote;
+        return roleText ? `${name} <span class="assignee-detail-role">(${roleText})</span>` : name;
+      }).join(' & ');
+    }
+
+    function renderPeopleRoles() {
+      const peopleList = document.getElementById('people-list');
+      const rolesList = document.getElementById('roles-list');
+      const roleSelect = document.getElementById('person-role');
+      const datalist = document.getElementById('people-datalist');
+      if (!peopleList || !rolesList || !roleSelect || !datalist) return;
+
+      roleSelect.innerHTML = '<option value="">Sin rol</option>' + peopleRoles.roles
+        .map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+
+      datalist.innerHTML = peopleRoles.people
+        .map(p => `<option value="${p.name}"></option>`).join('');
+
+      peopleList.innerHTML = peopleRoles.people.length ? peopleRoles.people.map(p => {
+        const role = peopleRoles.roles.find(r => r.id === p.roleId);
+        return `<div class="person-row">
+          <div class="person-info"><div class="person-name">${p.name}</div><div class="person-role">${role ? role.name : 'Sin rol'}</div>${role && role.description ? `<div class="person-role-description">${role.description}</div>` : ''}</div>
+          <button class="people-delete" type="button" onclick="removePerson('${p.id}')" title="Eliminar persona">&times;</button>
+        </div>`;
+      }).join('') : '<div class="people-empty">No hay personas registradas.</div>';
+
+      rolesList.innerHTML = peopleRoles.roles.length ? peopleRoles.roles.map(r => {
+        const used = peopleRoles.people.some(p => p.roleId === r.id);
+        return `<div class="person-row">
+          <div class="person-info"><div class="person-name">${r.name}</div><div class="person-role">${used ? 'En uso por una o más personas' : 'Sin personas asignadas'}</div>${r.description ? `<div class="person-role-description">${r.description}</div>` : ''}</div>
+          <button class="people-delete" type="button" onclick="removeRole('${r.id}')" title="Eliminar rol">&times;</button>
+        </div>`;
+      }).join('') : '<div class="people-empty">No hay roles registrados.</div>';
+    }
+
+    function createRole() {
+      const input = document.getElementById('role-name');
+      const name = input.value.trim();
+      if (!name) { alert('Escribe el nombre del rol.'); return; }
+      if (peopleRoles.roles.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+        alert('Ese rol ya existe.'); return;
+      }
+      peopleRoles.roles.push({ id: `role-${Date.now()}`, name });
+      input.value = '';
+      savePeopleRoles();
+      renderPeopleRoles();
+    }
+
+    function createPerson() {
+      const nameInput = document.getElementById('person-name');
+      const roleSelect = document.getElementById('person-role');
+      const name = nameInput.value.trim();
+      if (!name) { alert('Escribe el nombre de la persona.'); return; }
+      if (peopleRoles.people.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        alert('Esa persona ya existe.'); return;
+      }
+      peopleRoles.people.push({ id: `person-${Date.now()}`, name, roleId: roleSelect.value || '' });
+      nameInput.value = '';
+      roleSelect.value = '';
+      savePeopleRoles();
+      renderPeopleRoles();
+      filterTasks();
+    }
+
+    function removePerson(id) {
+      peopleRoles.people = peopleRoles.people.filter(p => p.id !== id);
+      savePeopleRoles();
+      renderPeopleRoles();
+      filterTasks();
+    }
+
+    function removeRole(id) {
+      if (peopleRoles.people.some(p => p.roleId === id)) {
+        alert('No puedes eliminar un rol que está asignado a una persona.');
+        return;
+      }
+      peopleRoles.roles = peopleRoles.roles.filter(r => r.id !== id);
+      savePeopleRoles();
+      renderPeopleRoles();
+    }
+
+    // Persistencia de tareas: los cambios de Semana, Épica, Estado, Prioridad
+    // y subtareas sobreviven al cierre o recarga del HTML.
+    const TASKS_STORAGE_KEY = 'post-sismico-product-backlog-v2';
+    const TASKS_DATA_VERSION = 3;
+
+    function cloneTasks(list) {
+      return JSON.parse(JSON.stringify(list));
+    }
+
+    function saveTasks() {
+      try {
+        localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify({ version: TASKS_DATA_VERSION, tasks }));
+      } catch (e) {
+        // Si el navegador bloquea localStorage, la aplicación continúa en memoria.
+      }
+    }
+
+    function loadTasks() {
+      try {
+        const raw = localStorage.getItem(TASKS_STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (!saved || !Array.isArray(saved.tasks)) return;
+        tasks = saved.tasks;
+        tasks.forEach((task, index) => ensureTaskFields(task, index));
+        nextId = Math.max(0, ...tasks.map(t => Number(t.id) || 0)) + 1;
+      } catch (e) {
+        // Mantener los datos iniciales si no se puede leer el almacenamiento.
+      }
+    }
+
+
+    // Fechas reales del proyecto: 4 semanas distribuidas durante septiembre de 2026.
+    // Se dejan como valores iniciales, pero el usuario puede modificarlas desde
+    // la Línea de Tiempo. Los cambios se conservan en localStorage.
+    const DEFAULT_SPRINT_DATES = {
+      S1: { start: '2026-09-01', end: '2026-09-07' },
+      S2: { start: '2026-09-08', end: '2026-09-14' },
+      S3: { start: '2026-09-15', end: '2026-09-21' },
+      S4: { start: '2026-09-22', end: '2026-09-28' }
+    };
+
+    let sprintDates = JSON.parse(JSON.stringify(DEFAULT_SPRINT_DATES));
+    const SPRINT_DATES_KEY = 'post-sismico-sprint-fechas';
+
+    function loadSprintDates() {
+      try {
+        const raw = localStorage.getItem(SPRINT_DATES_KEY);
+        if (!raw) return;
+
+        const saved = JSON.parse(raw);
+        if (!saved || typeof saved !== 'object') return;
+
+        // Conserva las fechas que el usuario ya haya cambiado y completa
+        // únicamente las semanas/campos que todavía no tengan una fecha.
+        Object.keys(DEFAULT_SPRINT_DATES).forEach(week => {
+          sprintDates[week] = {
+            ...DEFAULT_SPRINT_DATES[week],
+            ...(saved[week] || {})
+          };
+        });
+
+        Object.keys(saved).forEach(week => {
+          if (!sprintDates[week]) sprintDates[week] = saved[week];
+        });
+      } catch (e) {
+        sprintDates = JSON.parse(JSON.stringify(DEFAULT_SPRINT_DATES));
+      }
+    }
+
+    function saveSprintDates() {
+      try {
+        localStorage.setItem(SPRINT_DATES_KEY, JSON.stringify(sprintDates));
+      } catch (e) {
+        // almacenamiento no disponible; se sigue trabajando solo en memoria
+      }
+    }
+
+    function updateSprintDate(weekKey, field, value) {
+      if (!sprintDates[weekKey]) sprintDates[weekKey] = {};
+      sprintDates[weekKey][field] = value;
+
+      // Las tareas usan las fechas como fuente de verdad. Si cambia el rango
+      // de una semana, actualizamos automáticamente la semana calculada de cada tarea.
+      tasks.forEach(task => {
+        if (task.startDate && task.endDate) syncTaskSchedule(task);
+      });
+
+      saveSprintDates();
+      saveTasks();
+      filterTasks();
+    }
+
+    function formatDateEs(dateStr) {
+      if (!dateStr) return '—';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function renderKanban(filteredTasks = tasks) {
+      tasks.forEach((task, index) => ensureTaskFields(task, index));
+      const statuses = ['backlog', 'progress', 'review', 'done'];
+      statuses.forEach((status, colIdx) => {
+        const container = document.getElementById(`container-${status}`);
+        container.closest('.column').style.setProperty('--col-i', colIdx);
+        container.innerHTML = '';
+        const statusTasks = filteredTasks.filter(t => t.status === status);
+
+        const badge = document.getElementById(`count-${status}`);
+        const prevCount = badge.innerText;
+        badge.innerText = statusTasks.length;
+        if (prevCount !== '' && prevCount !== String(statusTasks.length)) {
+          badge.classList.remove('bump');
+          void badge.offsetWidth;
+          badge.classList.add('bump');
+        }
+
+        statusTasks.forEach((task, idx) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.style.setProperty('--i', idx);
+          card.style.setProperty('--status-color', STATUS_DEFS[task.status].color);
+          card.draggable = true;
+          card.id = `task-${task.id}`;
+          card.ondragstart = (e) => drag(e, task.id);
+          card.onclick = (e) => {
+            if (e.target.closest('select, button, input, a')) return;
+            openTaskModal(task.id);
+          };
+
+          card.innerHTML = `
+            <div class="card-meta">
+              <div class="card-meta-left">
+                <span class="card-tag">${task.sem} · ${formatDateTimeEs(task.startDate)}</span>
+                ${renderEpicTag(task)}
+              </div>
+              <span>ID: #${task.id}</span>
+            </div>
+            <div class="card-title">${task.title}</div>
+            <div class="card-desc">${task.desc || ''}</div>
+            ${renderSubtaskProgress(task)}
+            <div class="card-footer">
+              <span class="assignee">${formatAssigneeWithRoles(task.assignee)}</span>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      });
+    }
+
+    function computeStats(list) {
+      const counts = { backlog: 0, progress: 0, review: 0, done: 0 };
+      list.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
+      const total = list.length;
+      const percent = total ? Math.round((counts.done / total) * 100) : 0;
+      return { total, counts, percent };
+    }
+
+    function renderStatsStrip(containerId, list) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const { total, counts, percent } = computeStats(list);
+      const cards = [
+        { label: 'Tareas totales', value: total, color: 'var(--text-main)' },
+        { label: STATUS_DEFS.backlog.label, value: counts.backlog, color: STATUS_DEFS.backlog.color },
+        { label: STATUS_DEFS.progress.label, value: counts.progress, color: STATUS_DEFS.progress.color },
+        { label: STATUS_DEFS.review.label, value: counts.review, color: STATUS_DEFS.review.color },
+        { label: STATUS_DEFS.done.label, value: counts.done, color: STATUS_DEFS.done.color },
+        { label: 'Completado', value: `${percent}%`, color: 'var(--accent-green)' }
+      ];
+      el.innerHTML = cards.map((c, i) => `
+        <div class="stat-card" style="--stat-color:${c.color}; --i:${i}">
+          <div class="stat-value">${c.value}</div>
+          <div class="stat-label">${c.label}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderTable(filteredTasks = tasks) {
+      tasks.forEach((task, index) => ensureTaskFields(task, index));
+      renderStatsStrip('matrix-stats', filteredTasks);
+
+      const body = document.getElementById('matrix-body');
+      body.innerHTML = '';
+
+      const epicMap = {};
+      EPIC_ORDER.forEach(key => { epicMap[key] = []; });
+      filteredTasks.forEach(t => {
+        const key = EPIC_DEFS[t.epic] ? t.epic : 'logistica';
+        if (!epicMap[key]) epicMap[key] = [];
+        epicMap[key].push(t);
+      });
+
+      const visibleEpics = EPIC_ORDER.filter(key => epicMap[key].length > 0);
+      if (!visibleEpics.length) {
+        body.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">No hay tareas para mostrar.</p>';
+        return;
+      }
+
+      visibleEpics.forEach(epicKey => {
+        const epic = EPIC_DEFS[epicKey];
+        const group = document.createElement('div');
+        group.className = 'week-group';
+        group.style.marginBottom = '1.8rem';
+        group.innerHTML = `
+          <div class="week-group-title" style="font-size:0.9rem; color:${epic.color};">
+            <span style="display:inline-flex;align-items:center;gap:.5rem;">
+              <span class="epic-dot" style="background:${epic.color};color:${epic.color}"></span>
+              ${epic.label}
+            </span>
+          </div>
+        `;
+
+        epicMap[epicKey].forEach((t, idx) => {
+          const def = STATUS_DEFS[t.status];
+          const row = document.createElement('div');
+          row.className = 'matrix-row';
+          row.style.setProperty('--row-color', def.color);
+          row.style.setProperty('--i', idx);
+          row.innerHTML = `
+            <div class="matrix-row-main matrix-row-clickable" onclick="openTaskModal('${t.id}')" title="Abrir actividad y checklist">
+              <div class="matrix-row-top">
+                <span class="chip chip-week">${t.sem || 'Sin semana'} · ${formatDateTimeEs(t.startDate)}</span>
+                ${renderEpicTag(t)}
+                <span class="chip">${formatAssigneeWithRoles(t.assignee)}</span>
+              </div>
+              <div class="matrix-row-title">${t.title}</div>
+              <div class="task-date-summary">
+                ${formatDateTimeEs(t.startDate)} → ${formatDateTimeEs(t.endDate)}
+                · <span class="task-duration">${formatDuration(t.startDate, t.endDate)}</span>
+              </div>
+              ${t.valor ? `<div class="matrix-row-value">${t.valor}</div>` : ''}
+            </div>
+            <div class="matrix-row-side">
+              ${renderWeekSelect(t)}
+              ${renderEpicSelect(t)}
+              ${renderPrioritySelect(t)}
+              ${renderStatusSelect(t)}
+              <button class="matrix-row-open" title="Abrir actividad y checklist" onclick="openTaskModal('${t.id}')">&gt;</button>
+              <button class="row-remove" title="Eliminar tarea" onclick="removeTask('${t.id}')">&times;</button>
+            </div>
+          `;
+          group.appendChild(row);
+        });
+
+        body.appendChild(group);
+      });
+    }
+
+    // Semanas disponibles para reprogramar tareas.
+    // Incluye las semanas que ya tienen tareas, las semanas creadas mediante
+    // las fechas del sprint y las semanas base S1-S4 del proyecto.
+    function getAvailableWeeks() {
+      const weeks = new Set(['S1', 'S2', 'S3', 'S4']);
+
+      tasks.forEach(t => {
+        if (t.sem) weeks.add(t.sem);
+      });
+
+      Object.keys(sprintDates).forEach(week => {
+        if (week) weeks.add(week);
+      });
+
+      return Array.from(weeks).sort((a, b) => {
+        const aMatch = String(a).match(/^(?:S|Semana\\s*)(\\d+)$/i);
+        const bMatch = String(b).match(/^(?:S|Semana\\s*)(\\d+)$/i);
+
+        if (aMatch && bMatch) {
+          return Number(aMatch[1]) - Number(bMatch[1]);
+        }
+
+        if (aMatch) return -1;
+        if (bMatch) return 1;
+
+        return String(a).localeCompare(String(b), 'es', { numeric: true });
+      });
+    }
+
+    function renderWeekSelect(task) {
+      const currentWeek = task.sem || 'Sin semana';
+      const allWeeks = getAvailableWeeks();
+
+      if (!allWeeks.includes(currentWeek)) {
+        allWeeks.push(currentWeek);
+      }
+
+      const options = allWeeks
+        .map(w => `<option value="${w}" ${w === currentWeek ? 'selected' : ''}>${w}</option>`)
+        .join('');
+
+      return `
+        <select class="week-select"
+                onchange="updateWeek('${task.id}', this.value)"
+                title="Mover a otra semana">
+          ${options}
+        </select>
+      `;
+    }
+
+    let EPIC_DEFS = {
+      seguridad:      { label: 'Seguridad Estructural', color: 'var(--accent-red)' },
+      sostenibilidad: { label: 'Sostenibilidad y Eficiencia', color: 'var(--accent-green)' },
+      acabados:       { label: 'Acabados Estéticos', color: 'var(--accent-purple)' },
+      logistica:      { label: 'Logística y Limpieza', color: 'var(--accent-orange)' }
+    };
+    let EPIC_ORDER = ['seguridad', 'sostenibilidad', 'acabados', 'logistica'];
+    const EPICS_STORAGE_KEY = 'post-sismico-epicas-v3';
+
+    function slugifyEpic(name) {
+      const base = String(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'epica';
+      let id = base, n = 2;
+      while (EPIC_DEFS[id]) id = base + '-' + n++;
+      return id;
+    }
+
+    function loadEpics() {
+      try {
+        const raw = localStorage.getItem(EPICS_STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (!saved || !Array.isArray(saved.order) || !saved.defs) return;
+        const valid = saved.order.filter(k => saved.defs[k]);
+        if (valid.length) {
+          EPIC_DEFS = saved.defs;
+          EPIC_ORDER = valid;
+        }
+      } catch(e) {}
+    }
+
+    function saveEpics() {
+      try { localStorage.setItem(EPICS_STORAGE_KEY, JSON.stringify({defs: EPIC_DEFS, order: EPIC_ORDER})); } catch(e) {}
+    }
+
+    function renderEpicSelectors() {
+      const add = document.getElementById('in-epica');
+      if (add) {
+        const current = add.value;
+        add.innerHTML = EPIC_ORDER.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(EPIC_DEFS[k].label)}</option>`).join('');
+        add.value = EPIC_DEFS[current] ? current : (EPIC_ORDER[0] || '');
+      }
+    }
+
+    function openEpicModal() {
+      document.getElementById('epic-name').value = '';
+      document.getElementById('epic-description').value = '';
+      document.getElementById('epic-color').value = '#60a5fa';
+      document.getElementById('epic-modal-overlay').classList.add('open');
+      setTimeout(() => document.getElementById('epic-name').focus(), 50);
+    }
+
+    function closeEpicModal() { document.getElementById('epic-modal-overlay').classList.remove('open'); }
+    function closeEpicModalOnOverlay(event) { if (event.target.id === 'epic-modal-overlay') closeEpicModal(); }
+
+    function createEpic() {
+      const name = document.getElementById('epic-name').value.trim();
+      const description = document.getElementById('epic-description').value.trim();
+      const color = document.getElementById('epic-color').value || '#60a5fa';
+      if (!name) { alert('Escribe el nombre de la Épica / Categoría.'); return; }
+      if (EPIC_ORDER.some(k => EPIC_DEFS[k].label.toLowerCase() === name.toLowerCase())) {
+        alert('Ya existe una Épica / Categoría con ese nombre.'); return;
+      }
+      const id = slugifyEpic(name);
+      EPIC_DEFS[id] = { label: name, color, description };
+      EPIC_ORDER.push(id);
+      saveEpics();
+      renderEpicSelectors();
+      const add = document.getElementById('in-epica');
+      if (add) add.value = id;
+      closeEpicModal();
+      renderTable(tasks);
+    }
+
+    function renderEpicTag(task) {
+      const key = EPIC_DEFS[task.epic] ? task.epic : 'logistica';
+      const def = EPIC_DEFS[key];
+      return `<span class="card-epic" title="${def.label}">
+        <span class="card-epic-dot" style="background:${def.color}"></span>${def.label}
+      </span>`;
+    }
+
+    function renderSubtaskProgress(task) {
+      const list = Array.isArray(task.subtasks) ? task.subtasks : [];
+      if (!list.length) return '';
+      const done = list.filter(s => s.done).length;
+      const pct = Math.round((done / list.length) * 100);
+      return `<div class="subtask-progress">
+        ✓ ${done}/${list.length} subtareas
+        <div class="subtask-progress-track">
+          <div class="subtask-progress-fill" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+    }
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function dateToInputValue(date) {
+      if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+      return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+    }
+
+    function parseLocalDateTime(value) {
+      if (!value) return null;
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatDateTimeEs(value) {
+      const d = parseLocalDateTime(value);
+      if (!d) return 'Sin fecha';
+      return d.toLocaleString('es-CO', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      }).replace(',', ' ·');
+    }
+
+    function startOfDay(value) {
+      const d = parseLocalDateTime(value);
+      if (!d) return null;
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function diffMinutes(startValue, endValue) {
+      const a = parseLocalDateTime(startValue);
+      const b = parseLocalDateTime(endValue);
+      if (!a || !b) return 0;
+      return Math.max(0, Math.round((b - a) / 60000));
+    }
+
+    function formatDuration(startValue, endValue) {
+      const mins = diffMinutes(startValue, endValue);
+      if (!mins) return 'Duración no definida';
+      const days = Math.floor(mins / 1440);
+      const hours = Math.floor((mins % 1440) / 60);
+      const rest = mins % 60;
+      const parts = [];
+      if (days) parts.push(`${days} ${days === 1 ? 'día' : 'días'}`);
+      if (hours) parts.push(`${hours} h`);
+      if (rest) parts.push(`${rest} min`);
+      return parts.join(' ') || '0 min';
+    }
+
+    function getProjectBounds() {
+      const starts = Object.values(sprintDates).map(x => parseLocalDateTime(x.start)).filter(Boolean);
+      const ends = Object.values(sprintDates).map(x => parseLocalDateTime(x.end)).filter(Boolean);
+      if (!starts.length || !ends.length) return null;
+      const start = new Date(Math.min(...starts.map(d => d.getTime())));
+      const end = new Date(Math.max(...ends.map(d => d.getTime())));
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    function weekForDate(value) {
+      const d = parseLocalDateTime(value);
+      if (!d) return 'S1';
+      const entries = Object.entries(sprintDates)
+        .map(([week, range]) => ({
+          week,
+          start: parseLocalDateTime(range.start),
+          end: parseLocalDateTime(range.end)
+        }))
+        .filter(x => x.start && x.end)
+        .sort((a,b) => a.start - b.start);
+
+      for (const item of entries) {
+        const end = new Date(item.end);
+        end.setHours(23,59,59,999);
+        if (d >= item.start && d <= end) return item.week;
+      }
+
+      if (entries.length) {
+        if (d < entries[0].start) return entries[0].week;
+        return entries[entries.length - 1].week;
+      }
+      return 'S1';
+    }
+
+    function projectDayLabel(value) {
+      const d = startOfDay(value);
+      const bounds = getProjectBounds();
+      if (!d || !bounds) return '—';
+      const start = startOfDay(dateToInputValue(bounds.start));
+      const diff = Math.floor((d - start) / 86400000);
+      return `Día ${Math.max(1, diff + 1)}`;
+    }
+
+    function syncTaskSchedule(task) {
+      const start = parseLocalDateTime(task.startDate);
+      const end = parseLocalDateTime(task.endDate);
+      if (!start || !end) return;
+
+      if (end < start) {
+        task.endDate = task.startDate;
+      }
+      task.sem = weekForDate(task.startDate);
+      task.dias = projectDayLabel(task.startDate) === projectDayLabel(task.endDate)
+        ? projectDayLabel(task.startDate)
+        : `${projectDayLabel(task.startDate)}–${projectDayLabel(task.endDate)}`;
+    }
+
+    function legacyTaskDates(task, index) {
+      if (task.startDate && task.endDate) return;
+      const nums = (String(task.dias || '').match(/\d+/g) || []).map(Number);
+      const startDay = nums.length ? nums[0] : (index + 1);
+      const endDay = nums.length > 1 ? nums[1] : startDay;
+      const base = parseLocalDateTime(DEFAULT_SPRINT_DATES.S1.start) || new Date(2026, 8, 1);
+      const start = new Date(base);
+      start.setDate(base.getDate() + Math.max(0, startDay - 1));
+      start.setHours(9, 0, 0, 0);
+      const end = new Date(base);
+      end.setDate(base.getDate() + Math.max(0, endDay - 1));
+      end.setHours(17, 0, 0, 0);
+      task.startDate = dateToInputValue(start);
+      task.endDate = dateToInputValue(end);
+    }
+
+    function ensureTaskFields(task, index = 0) {
+      if (!task.epic || !EPIC_DEFS[task.epic]) task.epic = 'logistica';
+      if (!Array.isArray(task.subtasks)) task.subtasks = [];
+      legacyTaskDates(task, index);
+      syncTaskSchedule(task);
+    }
+
+    function openTaskModal(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      ensureTaskFields(task);
+
+      document.getElementById('task-modal-title').textContent = task.title;
+      document.getElementById('task-modal-id').innerHTML = `Actividad #${task.id} · ${formatAssigneeWithRoles(task.assignee)}`;
+
+      document.getElementById('modal-epic').innerHTML = Object.entries(EPIC_DEFS)
+        .map(([key, d]) => `<option value="${key}" ${key === task.epic ? 'selected' : ''}>${d.label}</option>`).join('');
+      document.getElementById('modal-priority').innerHTML = Object.entries(PRIORITY_DEFS)
+        .map(([key, d]) => `<option value="${key}" ${key === (task.priority || 'media') ? 'selected' : ''}>${d.label}</option>`).join('');
+      document.getElementById('modal-status').innerHTML = Object.entries(STATUS_DEFS)
+        .map(([key, d]) => `<option value="${key}" ${key === task.status ? 'selected' : ''}>${d.label}</option>`).join('');
+      document.getElementById('modal-start').value = task.startDate || '';
+      document.getElementById('modal-end').value = task.endDate || '';
+
+      document.getElementById('task-modal-overlay').dataset.taskId = id;
+      document.getElementById('subtask-input').value = '';
+      renderSubtasks(task);
+      document.getElementById('task-modal-overlay').classList.add('open');
+    }
+
+    function closeTaskModal() {
+      document.getElementById('task-modal-overlay').classList.remove('open');
+      document.getElementById('task-modal-overlay').dataset.taskId = '';
+    }
+
+    function closeTaskModalOnOverlay(event) {
+      if (event.target.id === 'task-modal-overlay') closeTaskModal();
+    }
+
+    function updateTaskFromModal(field, value) {
+      const id = document.getElementById('task-modal-overlay').dataset.taskId;
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      if (field === 'epic' && EPIC_DEFS[value]) task.epic = value;
+      if (field === 'priority' && PRIORITY_DEFS[value]) task.priority = value;
+      if (field === 'status' && STATUS_DEFS[value]) task.status = value;
+
+      if (field === 'startDate' || field === 'endDate') {
+        const nextStart = field === 'startDate' ? value : task.startDate;
+        const nextEnd = field === 'endDate' ? value : task.endDate;
+        const start = parseLocalDateTime(nextStart);
+        const end = parseLocalDateTime(nextEnd);
+        if (!start || !end) return;
+        if (end < start) {
+          if (field === 'startDate') {
+            task.endDate = value;
+            document.getElementById('modal-end').value = value;
+          } else {
+            task.startDate = value;
+            document.getElementById('modal-start').value = value;
+          }
+        } else {
+          task.startDate = nextStart;
+          task.endDate = nextEnd;
+        }
+        syncTaskSchedule(task);
+        document.getElementById('task-modal-title').textContent = task.title;
+      }
+
+      saveTasks();
+      filterTasks();
+    }
+
+    function renderSubtasks(task) {
+      ensureTaskFields(task);
+      const list = document.getElementById('subtask-list');
+      const done = task.subtasks.filter(s => s.done).length;
+      document.getElementById('subtask-count').textContent = `${done}/${task.subtasks.length} completadas`;
+
+      if (!task.subtasks.length) {
+        list.innerHTML = '<div class="subtask-empty">Aún no hay subtareas. Agrega los pasos de ejecución de esta actividad.</div>';
+        return;
+      }
+
+      list.innerHTML = task.subtasks.map((sub, idx) => `
+        <div class="subtask-item ${sub.done ? 'completed' : ''}">
+          <input type="checkbox" ${sub.done ? 'checked' : ''} onchange="toggleSubtask(${idx}, this.checked)">
+          <span class="subtask-text">${escapeHtml(sub.text)}</span>
+          <button class="subtask-delete" onclick="deleteSubtask(${idx})" title="Eliminar subtarea">&times;</button>
+        </div>
+      `).join('');
+    }
+
+    function addSubtask() {
+      const overlay = document.getElementById('task-modal-overlay');
+      const id = overlay.dataset.taskId;
+      const task = tasks.find(t => t.id === id);
+      const input = document.getElementById('subtask-input');
+      const text = input.value.trim();
+      if (!task || !text) return;
+      ensureTaskFields(task);
+      task.subtasks.push({ text, done: false });
+      saveTasks();
+      input.value = '';
+      renderSubtasks(task);
+      filterTasks();
+      input.focus();
+    }
+
+    function toggleSubtask(index, checked) {
+      const id = document.getElementById('task-modal-overlay').dataset.taskId;
+      const task = tasks.find(t => t.id === id);
+      if (!task || !task.subtasks[index]) return;
+      task.subtasks[index].done = checked;
+      saveTasks();
+      renderSubtasks(task);
+      filterTasks();
+    }
+
+    function deleteSubtask(index) {
+      const id = document.getElementById('task-modal-overlay').dataset.taskId;
+      const task = tasks.find(t => t.id === id);
+      if (!task || !task.subtasks[index]) return;
+      task.subtasks.splice(index, 1);
+      saveTasks();
+      renderSubtasks(task);
+      filterTasks();
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+      }[ch]));
+    }
+
+    function renderEpicSelect(task) {
+      const currentEpic = EPIC_DEFS[task.epic] ? task.epic : 'logistica';
+      const options = EPIC_ORDER
+        .map(key => `<option value="${key}" ${key === currentEpic ? 'selected' : ''}>${EPIC_DEFS[key].label}</option>`)
+        .join('');
+      return `
+        <select class="week-select epic-move-select"
+                onchange="updateEpic('${task.id}', this.value)"
+                title="Mover a otra épica">
+          ${options}
+        </select>
+      `;
+    }
+
+    function updateEpic(id, newEpic) {
+      const task = tasks.find(t => t.id === id);
+      if (task && EPIC_DEFS[newEpic]) {
+        task.epic = newEpic;
+        saveTasks();
+        filterTasks();
+      }
+    }
+
+    function renderPrioritySelect(task) {
+      const currentPriority = PRIORITY_DEFS[task.priority] ? task.priority : 'media';
+      const options = Object.entries(PRIORITY_DEFS)
+        .map(([key, d]) => `<option value="${key}" ${key === currentPriority ? 'selected' : ''}>${d.label}</option>`)
+        .join('');
+      return `
+        <span class="priority-select-wrap" style="color:${PRIORITY_DEFS[currentPriority].color}">
+          <span class="priority-dot" style="background:${PRIORITY_DEFS[currentPriority].color}"></span>
+          <select class="priority-select"
+                  onchange="updatePriority('${task.id}', this.value)"
+                  title="Cambiar prioridad">
+            ${options}
+          </select>
+        </span>
+      `;
+    }
+
+    function renderStatusSelect(task) {
+      const def = STATUS_DEFS[task.status];
+      const options = Object.entries(STATUS_DEFS)
+        .map(([key, d]) => `<option value="${key}" ${key === task.status ? 'selected' : ''}>${d.label}</option>`)
+        .join('');
+      return `
+        <span class="status-select-wrap" style="color:${def.color}">
+          <span class="status-dot ${task.status === 'progress' ? 'is-progress' : ''}" style="background:${def.color}"></span>
+          <select class="status-select" onchange="updateStatus('${task.id}', this.value)">
+            ${options}
+          </select>
+        </span>
+      `;
+    }
+
+    function parseDayRange(diasStr) {
+      if (!diasStr) return null;
+      const nums = (diasStr.match(/\d+/g) || []).map(Number);
+      if (nums.length === 0) return null;
+      const start = nums[0];
+      const end = nums.length > 1 ? nums[1] : nums[0];
+      return { start, end: Math.max(start, end) };
+    }
+
+    const STATUS_WEIGHT = { backlog: 0, progress: 0.5, review: 0.75, done: 1 };
+
+    function renderTimeline(filteredTasks = tasks) {
+      renderStatsStrip('timeline-stats', filteredTasks);
+
+      const overallEl = document.getElementById('overall-progress');
+      if (overallEl) {
+        const totalWeight = filteredTasks.reduce((sum, t) => sum + (STATUS_WEIGHT[t.status] ?? 0), 0);
+        const overallPct = filteredTasks.length ? Math.round((totalWeight / filteredTasks.length) * 100) : 0;
+        overallEl.innerHTML = `
+          <div class="overall-progress-top">
+            <h2>Progreso general del proyecto</h2>
+            <span class="overall-progress-pct">${overallPct}%</span>
+          </div>
+          <div class="overall-progress-track">
+            <div class="overall-progress-fill" style="width:${overallPct}%"></div>
+          </div>
+        `;
+      }
+
+      const body = document.getElementById('timeline-body');
+      body.innerHTML = '';
+
+      const weekOrder = getAvailableWeeks().filter(w => sprintDates[w]);
+      if (!weekOrder.length) {
+        body.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">No hay semanas con fechas configuradas.</p>';
+        return;
+      }
+
+      weekOrder.forEach((weekKey, weekIdx) => {
+        const sd = sprintDates[weekKey] || {};
+        const weekStart = parseLocalDateTime(sd.start);
+        const weekEndDate = parseLocalDateTime(sd.end);
+        if (!weekStart || !weekEndDate) return;
+
+        const weekEnd = new Date(weekEndDate);
+        weekEnd.setHours(23,59,59,999);
+
+        const weekTasks = filteredTasks.filter(t => {
+          const d = parseLocalDateTime(t.startDate);
+          return d && d <= weekEnd && parseLocalDateTime(t.endDate) >= weekStart;
+        });
+
+        const totalWeight = weekTasks.reduce((sum, t) => sum + (STATUS_WEIGHT[t.status] ?? 0), 0);
+        const percent = Math.round((totalWeight / Math.max(weekTasks.length, 1)) * 100);
+        const doneCount = weekTasks.filter(t => t.status === 'done').length;
+
+        const weekBlock = document.createElement('div');
+        weekBlock.className = 'week-block';
+        weekBlock.style.setProperty('--w-i', weekIdx);
+
+        const header = document.createElement('div');
+        header.className = 'week-header';
+        header.innerHTML = `
+          <span class="week-title">${escapeHtml(weekKey)}</span>
+          <span class="sprint-dates">
+            <input type="date" class="sprint-date-input" value="${sd.start || ''}" onchange="updateSprintDate('${weekKey}', 'start', this.value)" title="Fecha de inicio del sprint">
+            <span class="sprint-dates-sep">–</span>
+            <input type="date" class="sprint-date-input" value="${sd.end || ''}" onchange="updateSprintDate('${weekKey}', 'end', this.value)" title="Fecha de fin del sprint">
+          </span>
+          <span class="week-day-range">${formatDateTimeEs(dateToInputValue(weekStart))} → ${formatDateTimeEs(dateToInputValue(weekEnd))}</span>
+          <div class="week-progress-track">
+            <div class="week-progress-fill" style="width:${percent}%; background:${percent === 100 ? 'var(--accent-green)' : 'var(--accent-orange)'}"></div>
+          </div>
+          <span class="week-progress-label">${percent}% · ${doneCount}/${weekTasks.length} tareas</span>
+        `;
+        weekBlock.appendChild(header);
+
+        const rows = document.createElement('div');
+        rows.className = 'timeline-rows';
+
+        if (!weekTasks.length) {
+          rows.innerHTML = '<div style="padding:1rem;color:var(--text-muted);font-size:.78rem;">Sin tareas programadas en esta semana.</div>';
+        }
+
+        const spanMs = Math.max(weekEnd - weekStart, 1);
+
+        weekTasks.forEach((t, idx) => {
+          const taskStart = parseLocalDateTime(t.startDate);
+          const taskEnd = parseLocalDateTime(t.endDate);
+          const visibleStart = new Date(Math.max(taskStart, weekStart));
+          const visibleEnd = new Date(Math.min(taskEnd, weekEnd));
+
+          let leftPct = ((visibleStart - weekStart) / spanMs) * 100;
+          let widthPct = ((visibleEnd - visibleStart) / spanMs) * 100;
+          widthPct = Math.max(widthPct, 2.5);
+          leftPct = Math.max(0, Math.min(100, leftPct));
+          widthPct = Math.min(widthPct, 100 - leftPct);
+
+          const def = STATUS_DEFS[t.status];
+          const row = document.createElement('div');
+          row.className = 'timeline-row';
+          row.style.setProperty('--r-i', idx);
+          row.innerHTML = `
+            <div class="timeline-label">
+              ${escapeHtml(t.title)}
+              <span class="tl-day">${formatDateTimeEs(t.startDate)} → ${formatDateTimeEs(t.endDate)} · ${formatDuration(t.startDate, t.endDate)}</span>
+            </div>
+            <div class="timeline-track" title="Haz clic para abrir la actividad">
+              <div class="timeline-bar" style="left:${leftPct}%; width:${widthPct}%; background:${def.color}; color:${def.color};" title="${escapeHtml(def.label)} · ${escapeHtml(formatDateTimeEs(t.startDate))} → ${escapeHtml(formatDateTimeEs(t.endDate))}" onclick="openTaskModal('${t.id}')">
+                ${widthPct >= 18 ? `<span class="timeline-bar-label">${escapeHtml(t.sem)} · ${escapeHtml(formatDateTimeEs(t.startDate))}</span>` : ''}
+              </div>
+            </div>
+          `;
+          rows.appendChild(row);
+        });
+
+        weekBlock.appendChild(rows);
+        body.appendChild(weekBlock);
+      });
+    }
+
+    // Función para actualizar la semana asignada a la tarea.
+    // Al cambiarla, la tarea se vuelve a renderizar y pasa inmediatamente
+    // al grupo de la nueva semana en la Matriz y en la Línea de Tiempo.
+    function updateWeek(id, newWeek) {
+      const task = tasks.find(t => t.id === id);
+      const sprint = sprintDates[newWeek];
+      if (!task || !newWeek || !sprint) return;
+
+      const currentStart = parseLocalDateTime(task.startDate);
+      const currentEnd = parseLocalDateTime(task.endDate);
+      const sprintStart = parseLocalDateTime(sprint.start);
+      if (!sprintStart) return;
+
+      const duration = Math.max(0, diffMinutes(task.startDate, task.endDate));
+      const oldStart = currentStart || sprintStart;
+      const hour = oldStart.getHours();
+      const minute = oldStart.getMinutes();
+      const start = new Date(sprintStart);
+      start.setHours(hour, minute, 0, 0);
+
+      const sprintEnd = parseLocalDateTime(sprint.end);
+      if (sprintEnd && start > new Date(new Date(sprintEnd).setHours(23,59,0,0))) {
+        start.setHours(9, 0, 0, 0);
+      }
+
+      const end = new Date(start.getTime() + duration * 60000);
+      task.startDate = dateToInputValue(start);
+      task.endDate = dateToInputValue(end);
+      syncTaskSchedule(task);
+      saveTasks();
+      filterTasks();
+    }
+
+    function updateStatus(id, newStatus) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.status = newStatus;
+        saveTasks();
+        filterTasks();
+      }
+    }
+
+    function addTask() {
+      const startDate = document.getElementById('in-start').value;
+      const endDate = document.getElementById('in-end').value;
+      const title = document.getElementById('in-title').value.trim();
+      const assignee = document.getElementById('in-assignee').value.trim();
+      const valor = document.getElementById('in-valor').value.trim();
+      const priority = document.getElementById('in-prioridad').value;
+      const epic = document.getElementById('in-epica').value;
+
+      const start = parseLocalDateTime(startDate);
+      const end = parseLocalDateTime(endDate);
+
+      if (!title || !assignee) {
+        alert('Por favor completa al menos la Tarea y el Responsable.');
+        return;
+      }
+      if (!start || !end) {
+        alert('Selecciona la fecha y hora de inicio y de finalización.');
+        return;
+      }
+      if (end < start) {
+        alert('La fecha/hora de finalización no puede ser anterior al inicio.');
+        return;
+      }
+
+      const task = {
+        id: String(nextId++),
+        sem: weekForDate(startDate),
+        dias: '',
+        startDate,
+        endDate,
+        title,
+        desc: '',
+        assignee,
+        valor: valor || '—',
+        status: 'backlog',
+        priority,
+        epic: EPIC_DEFS[epic] ? epic : 'logistica',
+        subtasks: []
+      };
+      syncTaskSchedule(task);
+      tasks.push(task);
+
+      ['in-start', 'in-end', 'in-title', 'in-assignee', 'in-valor'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('in-prioridad').value = 'media';
+      document.getElementById('in-epica').value = 'logistica';
+
+      saveTasks();
+      filterTasks();
+    }
+
+    function updatePriority(id, newPriority) {
+      const task = tasks.find(t => t.id === id);
+      if (task && PRIORITY_DEFS[newPriority]) {
+        task.priority = newPriority;
+        saveTasks();
+        filterTasks();
+      }
+    }
+
+    function removeTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      saveTasks();
+      filterTasks();
+    }
+
+    /* Drag and Drop Handlers (vista Kanban) */
+    function allowDrop(ev) { ev.preventDefault(); }
+
+    function drag(ev, id) { ev.dataTransfer.setData("taskId", id); }
+
+    function drop(ev) {
+      ev.preventDefault();
+      const taskId = ev.dataTransfer.getData("taskId");
+      let targetColumn = ev.target.closest('.column');
+      if (targetColumn) {
+        const newStatus = targetColumn.getAttribute('data-status');
+        updateStatus(taskId, newStatus);
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeTaskModal();
+    });
+
+    /* Filtros y cambio de vista */
+    function filterTasks() {
+      const selected = document.getElementById('filter-assignee').value;
+      let filtered = tasks;
+      if (selected !== 'ALL') {
+        filtered = tasks.filter(t => t.assignee.includes(selected));
+      }
+      renderKanban(filtered);
+      renderTable(filtered);
+      renderTimeline(filtered);
+    }
+
+    function switchView(view) {
+      const kanbanView = document.getElementById('kanban-view');
+      const tableView = document.getElementById('table-view');
+      const timelineView = document.getElementById('timeline-view');
+      const clientView = document.getElementById('client-view');
+      const btnKanban = document.getElementById('btn-kanban');
+      const btnTable = document.getElementById('btn-table');
+      const btnTimeline = document.getElementById('btn-timeline');
+      const peopleView = document.getElementById('people-view');
+      const btnPeople = document.getElementById('btn-people');
+      const btnClient = document.getElementById('btn-client');
+
+      kanbanView.style.display = 'none';
+      tableView.style.display = 'none';
+      timelineView.style.display = 'none';
+      clientView.style.display = 'none';
+      peopleView.style.display = 'none';
+      [btnKanban, btnTable, btnTimeline, btnClient, btnPeople].forEach(b => b.classList.remove('active'));
+
+      function playEnter(el, displayValue) {
+        el.style.display = displayValue;
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = 'viewFade 0.3s ease';
+      }
+
+      if (view === 'kanban') {
+        playEnter(kanbanView, 'flex');
+        btnKanban.classList.add('active');
+      } else if (view === 'table') {
+        playEnter(tableView, 'block');
+        btnTable.classList.add('active');
+      } else if (view === 'timeline') {
+        playEnter(timelineView, 'block');
+        btnTimeline.classList.add('active');
+        filterTasks();
+      } else if (view === 'client') {
+        playEnter(clientView, 'block');
+        btnClient.classList.add('active');
+        updateClientPreview();
+      } else if (view === 'people') {
+        playEnter(peopleView, 'block');
+        btnPeople.classList.add('active');
+        renderPeopleRoles();
+      }
+    }
+
+    /* Información del Cliente */
+    const CLIENT_STORAGE_KEY = 'post-sismico-cliente-info';
+    const DEFAULT_CLIENT_INFO = {
+      nombre: 'Familia Martínez',
+      telefono: '300 456 7890',
+      email: 'familia.martinez@email.com',
+      direccion: 'Bogotá D.C., Colombia · Vivienda unifamiliar de dos pisos',
+      presupuesto: '$25.000.000 COP',
+      contexto: 'Proyecto de reparación post-sísmica y remodelación integral de una vivienda habitada de dos pisos en Colombia. La prioridad es garantizar la seguridad estructural y reparar las fisuras causadas por el terremoto. La intervención también busca convertir la vivienda en un hogar moderno, eco-amigable y eficiente, aprovechando materiales sostenibles y soluciones de bajo consumo.\n\nNecesidad específica: garantizar la seguridad estructural y reparar las fisuras post-sísmicas, manteniendo la vivienda habitable durante la obra.\n\nProducto / Servicio: servicio integral de reparación post-sísmica, remodelación estética sostenible y adecuación de eficiencia hidroeléctrica.\n\nFecha límite: 4 semanas, innegociable, debido a un evento familiar.\n\nEntregables principales: inspección y reparación de elementos estructurales y fisuras; resane y ajustes de acabados; pinturas ecológicas sin VOC; pared de acento y revestimientos sostenibles; renovación de gabinetes; griferías de bajo consumo; iluminación LED; adecuación del espacio de teletrabajo; limpieza y zonificación post-obra.'
+    };
+
+
+    function getClientFields() {
+      return {
+        nombre: document.getElementById('cl-nombre').value.trim(),
+        telefono: document.getElementById('cl-telefono').value.trim(),
+        email: document.getElementById('cl-email').value.trim(),
+        direccion: document.getElementById('cl-direccion').value.trim(),
+        presupuesto: document.getElementById('cl-presupuesto').value.trim(),
+        contexto: document.getElementById('cl-contexto').value.trim()
+      };
+    }
+
+    function buildClientText(data) {
+      const lines = [
+        'INFORMACIÓN DEL CLIENTE',
+        '------------------------',
+        `Nombre: ${data.nombre || '—'}`,
+        `Teléfono: ${data.telefono || '—'}`,
+        `Correo: ${data.email || '—'}`,
+        `Dirección: ${data.direccion || '—'}`,
+        `Presupuesto: ${data.presupuesto || '—'}`,
+        '',
+        'Resumen del contexto y condiciones:',
+        data.contexto || '—'
+      ];
+      return lines.join('\n');
+    }
+
+    function updateClientPreview() {
+      const data = getClientFields();
+      document.getElementById('client-preview').textContent = buildClientText(data);
+    }
+
+    function saveClient() {
+      const data = getClientFields();
+      try {
+        localStorage.setItem(CLIENT_STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        // almacenamiento no disponible; se sigue trabajando solo en memoria
+      }
+      updateClientPreview();
+    }
+
+    function loadClient() {
+      let data = JSON.parse(JSON.stringify(DEFAULT_CLIENT_INFO));
+      try {
+        const raw = localStorage.getItem(CLIENT_STORAGE_KEY);
+        if (raw) data = { ...DEFAULT_CLIENT_INFO, ...JSON.parse(raw) };
+      } catch (e) {
+        data = null;
+      }
+      if (data) {
+        if (document.getElementById('cl-nombre')) document.getElementById('cl-nombre').value = data.nombre || '';
+        if (document.getElementById('cl-telefono')) document.getElementById('cl-telefono').value = data.telefono || '';
+        if (document.getElementById('cl-email')) document.getElementById('cl-email').value = data.email || '';
+        if (document.getElementById('cl-direccion')) document.getElementById('cl-direccion').value = data.direccion || '';
+        if (document.getElementById('cl-presupuesto')) document.getElementById('cl-presupuesto').value = data.presupuesto || '';
+        if (document.getElementById('cl-contexto')) document.getElementById('cl-contexto').value = data.contexto || '';
+      }
+      updateClientPreview();
+    }
+
+    function copyClientInfo() {
+      const text = buildClientText(getClientFields());
+      const feedback = document.getElementById('copy-feedback');
+
+      function showFeedback(msg) {
+        feedback.textContent = msg;
+        feedback.classList.add('show');
+        setTimeout(() => { feedback.classList.remove('show'); }, 2200);
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => showFeedback('✓ Copiado al portapapeles.'))
+          .catch(() => showFeedback('No se pudo copiar automáticamente. Selecciona el texto manualmente.'));
+      } else {
+        showFeedback('No se pudo copiar automáticamente. Selecciona el texto manualmente.');
+      }
+    }
+
+    // Inicialización
+    loadSprintDates();
+    loadEpics();
+    loadPeopleRoles();
+    renderPeopleRoles();
+    loadTasks();
+    renderEpicSelectors();
+    const firstSprintStart = DEFAULT_SPRINT_DATES.S1.start + 'T09:00';
+    const firstSprintEnd = DEFAULT_SPRINT_DATES.S1.start + 'T17:00';
+    if (document.getElementById('in-start')) document.getElementById('in-start').value = firstSprintStart;
+    if (document.getElementById('in-end')) document.getElementById('in-end').value = firstSprintEnd;
+    renderKanban();
+    renderTable();
+    renderTimeline();
+    loadClient();
+  </script>
+</body>
+</html>
